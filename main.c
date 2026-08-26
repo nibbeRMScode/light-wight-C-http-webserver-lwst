@@ -173,7 +173,7 @@ long unsigned printshit(void *lpParam)
     recvData hi = *(recvData *)lpParam;
     while (true)
     {
-        char fristline[128];
+        char fristline[256];
         char cuff[MaxFileSize] = "HTTP/1.1 200 OK\r\nContent-Type: Text/html\r\nContent-Length: 81\r\nConnection: keep-alive\r\n\r\n";
         char kii[MaxRequestSize] = "";
 
