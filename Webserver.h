@@ -11,7 +11,7 @@
 
 #define ContentType_HTML "Text/html"
 #define ContentType_CSS "Text/css"
-#define ContentType_JSON "Text/json"
+#define ContentType_JSON "application/json"
 #define ContentType_JS "application/javascript"
 
 #define MaxFileSize 64000

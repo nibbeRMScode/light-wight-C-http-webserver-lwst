@@ -41,11 +41,13 @@ ret:
 
 httpResponseData WhenPOST(httpRequestData RequestData)
 {
-    printf("\n\nPOST\n\n");
+    printf("\n\nPOST\n");
+    printf("\n%s", RequestData.HttpData.path);
+    printf("\n%s", RequestData.HttpData.data);
     httpResponseData ht;
     ht.HttpData.data = calloc(100, 1);
-    strcpy(ht.HttpData.data, "hello");
-    ht.statusCode = 204;
+    strcpy(ht.HttpData.data, RequestData.HttpData.data);
+    ht.statusCode = 200;
     return ht;
 }
 httpResponseData WhenHEAD(httpRequestData RequestData) {}

@@ -72,7 +72,7 @@ int strtoint(char *string)
 
 int printWquatesASNTM(char *buf)
 {
-    for (int k = 0; k < 30; k++)
+    for (int k = 0; k < 20; k++)
     {
         printf("%c", (buf[k] == 0) ? 34 : buf[k]);
     }
@@ -92,8 +92,9 @@ int GetNextToken(int startIdx, char *string, char *out)
     return i;
 }
 
-httpData httpPasers(char *httpRequest)
+httpData httpPasers(char *httpRequest, int len)
 {
+    printf(httpRequest);
     httpData output;
     char fristline[128];
     for (int i = 0; httpRequest[i] != '\n' && i < 128; i++)
@@ -106,71 +107,124 @@ httpData httpPasers(char *httpRequest)
     {
     }
     i++;
+    int preveisI = i;
     for (i = i; httpRequest[i] != ' ' && i < 80; i++)
     {
         // printf("\n %c %d", httpRequest[i], i - strlen(output.method));
-        // printf("\n %S\n", output.path);
-        // printWquatesASNTM(output.path);
+        printf("\n %S %d\n", output.path, preveisI);
+        printWquatesASNTM(output.path);
 
-        output.path[i - strlen(output.method) - 1] = httpRequest[i];
-        output.path[(i - strlen(output.method) - 1) + 1] = '\000';
+        output.path[i - preveisI - 1] = httpRequest[i];
+        output.path[(i - preveisI - 1) + 1] = '\000';
     }
     output.path[strlen(output.path)] = '\000';
     i = 0;
     char line[256];
-    while (httpRequest[i] != '\000' || i == 0)
+    uint8_t newlines = 0;
+    printf("\npath %s", output.path);
+    uint8_t *Data = malloc(MaxRequestSize);
+    short headerLength = 0;
+    bool data = false;
+    printf("\nlen %d\n", len);
+    while (i < len)
     {
-        int preveisI = i;
-        for (i = i; httpRequest[i] != '\n' && i < MaxRequestSize; i++)
+
+        preveisI = i;
+        if (data == false)
         {
-            line[i - preveisI] = httpRequest[i];
-            line[(i + 1) - preveisI] = '\000';
-            // printf("\n%c\n\n ", httpRequest[i]);
-            // printWquatesASNTM(line);
-            // printf("\n%s\n", line);
+            for (i = i; httpRequest[i] != '\n' && i < len && i < MaxRequestSize; i++)
+            {
+                line[i - preveisI] = httpRequest[i];
+                line[(i + 1) - preveisI] = '\000';
+                // printf("\n%c\n\n ", httpRequest[i]);
+                // printWquatesASNTM(line);
+                // printf("\n%s\n", line);
+            }
         }
-        char hi[256];
-        int nextT;
-        nextT = GetNextToken(0, line, hi);
-        printf("\nfrist token %s", hi);
-        printf("\nrequest %s\n", line);
-        printf("%d\n", strcmp(hi, "Host:"));
-        if (strcmp(hi, "Host:") == 0)
+        if (data == false)
         {
-            char value[128];
-            GetNextToken(nextT, line, value);
-            printf("\nkey %s\n value   %s \n", hi, value);
-            strcpy(output.host, value);
+            char hi[256];
+            int nextT;
+            // printf("\n\nnewlines %d %c\n\n", newlines, (httpRequest[i - 2] == '\n') ? 'n' : httpRequest[preveisI - 2]);
+            if (httpRequest[i] == '\n')
+            {
+                ++newlines;
+            }
+            if (newlines >= 2 && (httpRequest[i - 1] == '\n' || httpRequest[i - 2] == '\n'))
+            {
+                printf("Data %d %c", i, httpRequest[i]);
+                headerLength = i;
+                newlines = 0;
+                data = true;
+            }
+            if (httpRequest[i] != '\n' && httpRequest[i] != '\r')
+            {
+                newlines = 0;
+            }
+            printf("\nis data %s %d\n", (data) ? "true" : "false", i);
+
+            nextT = GetNextToken(0, line, hi);
+            printf("\nfrist token %s", hi);
+            printf("\nrequest %s\n", line);
+            printf("%d\n", strcmp(hi, "Host:"));
+            if (strcmp(hi, "Host:") == 0)
+            {
+                char value[128];
+                GetNextToken(nextT, line, value);
+                // printf("\nkey %s\n value   %s \n", hi, value);
+                strcpy(output.host, value);
+            }
+            if (strcmp(hi, "Content-Type:") == 0)
+            {
+                char value[128];
+                GetNextToken(nextT, line, value);
+                // printf("\nkey %s\n value   %s \n", hi, value);
+                strcpy(output.contentType, value);
+            }
+            if (strcmp(hi, "Content-Length:") == 0)
+            {
+                char value[128];
+                GetNextToken(nextT, line, value);
+                // printf("\nkey %s\n value   %d \n", hi, strtoint(value));
+                output.contentLength = strtoint(value);
+            }
+            if (strcmp(hi, "GET") == 0 || strcmp(hi, "POST") == 0 || strcmp(hi, "HEAD") == 0 || strcmp(hi, "OPTIONS") == 0)
+            {
+                strcpy(output.method, hi);
+            }
         }
-        if (strcmp(hi, "Content-Type:") == 0)
+        printf("\npath %s", output.path);
+        if (data == true)
         {
-            char value[128];
-            GetNextToken(nextT, line, value);
-            printf("\nkey %s\n value   %s \n", hi, value);
-            strcpy(output.contentType, value);
-        }
-        if (strcmp(hi, "Content-Length:") == 0)
-        {
-            char value[128];
-            GetNextToken(nextT, line, value);
-            printf("\nkey %s\n value   %d \n", hi, strtoint(value));
-            output.contentLength = strtoint(value);
-        }
-        if (strcmp(hi, "GET") == 0 || strcmp(hi, "POST") == 0 || strcmp(hi, "HEAD") == 0 || strcmp(hi, "OPTIONS") == 0)
-        {
-            strcpy(output.method, hi);
+            // printf("\ndata %d %c %s", i, httpRequest[i], (data) ? "true" : "false");
+            Data[i - headerLength] = httpRequest[i];
+            Data[(i + 1) - headerLength] = '\000';
         }
         i++;
     }
+    printf("\nData <: %s \n :>", Data);
     printf("\npath %s", output.path);
     printf("\nmethod %s\n", output.method);
     printWquatesASNTM(output.method);
+    output.data = Data;
     return output;
 }
 
 long unsigned printshit(void *lpParam)
 {
+    char commandline[MaxRequestSize];
+    STARTUPINFOA StartupInfo = {0};
+    StartupInfo.cb = sizeof(STARTUPINFOA);
+    PROCESS_INFORMATION Pinfo = {};
     recvData hi = *(recvData *)lpParam;
+    if (!CreateProcessA(NULL, commandline, NULL, NULL, FALSE, 0, NULL, NULL, &StartupInfo, &Pinfo))
+    {
+        printf("yay");
+    }
+    else
+    {
+        printf("fuck %d", WSAGetLastError());
+    }
     while (true)
     {
         char fristline[128];
@@ -187,9 +241,10 @@ long unsigned printshit(void *lpParam)
         }
         if (error > 0)
         {
+            kii[error] = '\000';
             printf("\n\n%d\n\n", error);
             char method[20] = "";
-            httpData Data = httpPasers(kii);
+            httpData Data = httpPasers(kii, error);
             strcpy(method, Data.method);
 
             httpRequestData RequestData =
@@ -197,6 +252,7 @@ long unsigned printshit(void *lpParam)
                     kii,
                     Data,
                 };
+            printf("\n%s", Data.data);
             httpResponseData Response = callMethodFromBackend(method, RequestData);
             if (Response.HttpData.data == NULL)
             {
@@ -243,6 +299,7 @@ long unsigned printshit(void *lpParam)
                 printf("\n\n\nRequested\n%s\n\n", cuff);
             }
             free(Response.HttpData.data);
+            free(Data.data);
         }
         Sleep(100);
     }
@@ -325,5 +382,6 @@ int main(int argc, char const *argv[])
     *SocketToPass = mysocket;
     CreateThread(NULL, 0, &accseptAny, SocketToPass, 0, NULL);
     Sleep(180000);
+
     return 0;
 }
